@@ -1,17 +1,22 @@
 # zhihu_favorites_spider
+
 ###知乎收藏夹爬虫实现
+
 ####0x01 环境配置及说明
+
 - python2.7 + windows10
 - 8M带宽
 - 开发环境：anaconda + pycharm Edu
 
 #####使用到的模块
+
 - requests
 - BeautifulSoup
 - multiprocessing
 - functools
 
 ####0x02 代码说明
+
 > collect_pic.py 顺序下载
 > zhihu_pool.py 使用进程池加快下载速度
 
@@ -30,6 +35,7 @@ pool.map_async(func, range(1,3))
 
 
 ####0x03 结果和todo
+
 ![代码运行](img/screenshot.png)
 
 
@@ -41,10 +47,15 @@ pool.map_async(func, range(1,3))
 
 
 ####0x04 ~~福利~~知乎收藏夹
+
 [轮带逛系列](https://www.zhihu.com/collection/108788130)
+
 [知乎花式骗图](https://www.zhihu.com/collection/69105016)
+
 [轮子哥带我逛知乎](https://www.zhihu.com/collection/78172986)
+
 [知乎看片指日可待](https://www.zhihu.com/collection/112174987)
+
 [知乎看片，就在今日](https://www.zhihu.com/collection/46627456)
 
 
