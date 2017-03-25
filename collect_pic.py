@@ -1,0 +1,135 @@
+#-*- coding:utf-8 -*-
+import os
+import sys
+import time
+import requests
+from bs4 import BeautifulSoup
+
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
+"""
+分析
+<div class="zh-summary summary clearfix">
+    <img data-rawheight="1280" data-width="960" ....
+    class="origin_image inline-img zh-lightbox-thumb"
+    data-original="https://pic3.zhimg.com/fc7b1f96b1bc37e2cdf359609db57b42_r.jpg">
+</div>
+
+<a href="/question/28550624/answer/147276777" class="toggle-expand">显示全部</a>
+
+<a href="?page=63">63</a> 最大的页数
+
+"""
+headers = { "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Encoding":"gzip, deflate, sdch, br",
+            "DNT":"1",
+            "Accept-Language":"zh-CN,zh;q=0.8,en;q=0.6",
+            "Host":"www.zhihu.com",
+            "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.110 Safari/537.36"}
+
+pic_headers = { "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept-Encoding":"gzip, deflate, sdch, br",
+                "Accept-Language":"zh-CN,zh;q=0.8,en;q=0.6",
+                "DNT":"1",
+                "Host":"pic2.zhimg.com",
+                "Upgrade-Insecure-Requests":"1",
+                "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.110 Safari/537.36"}
+
+
+def get_pic_url(url,  pagenum):
+    """
+    :param url: 收藏夹连接
+    :param pagenum: 页数
+    :return:  具体回答的链接的列表
+    """
+    link_list = []
+    real_url = url + "?page=" +str(pagenum+1)
+    r = requests.get(real_url, headers=headers).text
+    soup = BeautifulSoup(r, 'lxml')
+    for more_tag in soup.find_all("a", class_="toggle-expand"):
+        link_list.append("https://www.zhihu.com" + more_tag['href'])
+
+    return link_list
+
+def download_pic(pic_list, dirname):
+    """
+    :param pic_list: 获得到的图片链接列表
+    :param dirname:  保存的目录名字
+    :return: None
+    """
+    count = 1
+    if pic_list != None:
+        total = len(pic_list)
+    else:
+        total = 0
+        print "链接中没有图片"
+    if os.path.exists(dirname) == False:
+        os.mkdir(dirname)
+    #进入具体文件目录
+    os.chdir(dirname)
+    for pic_url in pic_list:
+        try:
+            file = pic_url.split('/')[3]
+            #防止重复下载图片
+            if  os.path.isfile(file) == False:
+                pic = requests.get(pic_url, headers=pic_headers,timeout=10)
+                pic.raise_for_status()
+                with open(file, "wb") as f:
+                    f.write(pic.content)
+                print "\r 正在下载回答中的第%s张图片， 共%s张图片"%(count, total)
+            count = count + 1
+        except:
+            print "download %s failed"%(pic_url)
+    #退回上一层目录
+    os.chdir('..')
+    #会遇到图片已经删除的情况，删除空的文件夹
+    if count == 1:
+        os.rmdir(dirname)
+
+def getmorepic(url, headers):
+    """
+    :param url: 详情页 具体问题下的回答的连接
+    :param headers: 模仿浏览器
+    :return:  具体问题下的原图url
+    """
+    more_url = []
+    try:
+        html = requests.get(url, headers=headers)
+        html.raise_for_status()
+        soup = BeautifulSoup(html.text, 'lxml')
+        for pic_tag in soup.find_all("img", class_="origin_image zh-lightbox-thumb"):
+            more_url.append(pic_tag['data-original'])
+        return more_url
+    except:
+        print "can't get %s"%(url)
+
+
+def get_page_num(starturl):
+    """
+    :param starturl: 收藏夹连接
+    :return: 收藏夹的页数
+    """
+    try:
+        html = requests.get(starturl, headers=headers)
+        html.raise_for_status()
+        soup = BeautifulSoup(html.text, 'lxml')
+        #页面总数
+        pagenum = soup.find('div', class_='zm-invite-pager').contents[11].a.string
+        return pagenum
+    except:
+        return None
+
+if __name__ == "__main__":
+    starturl = "https://www.zhihu.com/collection/69105016"
+    start = time.time()
+    pagenum = get_page_num(starturl)
+    for i in range(3):
+        link_list = get_pic_url(starturl, i)
+        print "正在下载:%s%s"%(starturl + "?page=", i+1)
+        for more_url in link_list:
+            print "下载: %s中的图片"%(more_url)
+            pic_list = getmorepic(more_url, headers)
+            download_pic(pic_list, more_url.split('/')[-1])
+    stop = time.time()
+    print 'time cost:%s'%(stop-start)
